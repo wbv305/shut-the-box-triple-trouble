@@ -358,6 +358,56 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Game Over / Stats Summary Overlay - Moved to fixed positioning outside game container */}
+      {(status === 'won' || status === 'lost') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a1a]/95 backdrop-blur-md border-2 border-[#eecfa1]/30 p-6 sm:p-8 rounded-2xl max-w-lg w-full shadow-2xl animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="text-center mb-6">
+              <h2 className={`text-4xl font-black mb-2 ${status === 'won' ? 'text-green-400' : 'text-red-400'}`}>
+                {status === 'won' ? 'YOU WON!' : 'GAME OVER'}
+              </h2>
+              <div className="text-6xl font-mono font-bold text-[#eecfa1] my-4">
+                {status === 'won' ? 0 : calculateScore(tiles)}
+              </div>
+              <p className="text-gray-400 uppercase tracking-widest text-sm">Final Score</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-white/5 p-3 rounded-lg text-center">
+                  <div className="text-2xl font-bold">{stats.gamesPlayed}</div>
+                  <div className="text-xs text-gray-400 uppercase">Games</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-green-400">{stats.wins}</div>
+                  <div className="text-xs text-gray-400 uppercase">Wins</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-purple-400">{stats.cleanSingleShuts}</div>
+                  <div className="text-xs text-gray-400 uppercase">Single Shuts</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-pink-400">{stats.cleanDoubleShuts}</div>
+                  <div className="text-xs text-gray-400 uppercase">Double Shuts</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-lg text-center col-span-2">
+                  <div className="text-2xl font-bold text-blue-300">
+                    {stats.gamesPlayed > 0 ? Math.round(stats.totalScore / stats.gamesPlayed) : 0}
+                  </div>
+                  <div className="text-xs text-gray-400 uppercase">Average Score</div>
+                </div>
+            </div>
+
+            <button
+              onClick={handleReset}
+              className="w-full py-4 bg-[#eecfa1] hover:bg-[#dabb8c] text-[#3e2723] font-black text-xl rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <RefreshCcw className="w-6 h-6" />
+              PLAY AGAIN
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Game Board (The Box) */}
       <div className="relative w-full max-w-5xl bg-[#110505] rounded-3xl p-2 sm:p-6 md:p-12 shadow-[inset_0_0_80px_rgba(0,0,0,1)] border-8 border-[#2a1810]">
         
@@ -376,56 +426,6 @@ const App: React.FC = () => {
                </h2>
              </div>
           </div>
-        )}
-
-        {/* Game Over / Stats Summary Overlay */}
-        {(status === 'won' || status === 'lost') && (
-           <div className="absolute inset-0 z-40 flex items-center justify-center p-4">
-             <div className="bg-[#1a1a1a]/95 backdrop-blur-md border-2 border-[#eecfa1]/30 p-6 sm:p-8 rounded-2xl max-w-lg w-full shadow-2xl animate-in fade-in zoom-in duration-300">
-                <div className="text-center mb-6">
-                  <h2 className={`text-4xl font-black mb-2 ${status === 'won' ? 'text-green-400' : 'text-red-400'}`}>
-                    {status === 'won' ? 'YOU WON!' : 'GAME OVER'}
-                  </h2>
-                  <div className="text-6xl font-mono font-bold text-[#eecfa1] my-4">
-                    {status === 'won' ? 0 : calculateScore(tiles)}
-                  </div>
-                  <p className="text-gray-400 uppercase tracking-widest text-sm">Final Score</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                   <div className="bg-white/5 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold">{stats.gamesPlayed}</div>
-                      <div className="text-xs text-gray-400 uppercase">Games</div>
-                   </div>
-                   <div className="bg-white/5 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-green-400">{stats.wins}</div>
-                      <div className="text-xs text-gray-400 uppercase">Wins</div>
-                   </div>
-                   <div className="bg-white/5 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-purple-400">{stats.cleanSingleShuts}</div>
-                      <div className="text-xs text-gray-400 uppercase">Single Shuts</div>
-                   </div>
-                   <div className="bg-white/5 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-pink-400">{stats.cleanDoubleShuts}</div>
-                      <div className="text-xs text-gray-400 uppercase">Double Shuts</div>
-                   </div>
-                   <div className="bg-white/5 p-3 rounded-lg text-center col-span-2">
-                      <div className="text-2xl font-bold text-blue-300">
-                        {stats.gamesPlayed > 0 ? Math.round(stats.totalScore / stats.gamesPlayed) : 0}
-                      </div>
-                      <div className="text-xs text-gray-400 uppercase">Average Score</div>
-                   </div>
-                </div>
-
-                <button
-                  onClick={handleReset}
-                  className="w-full py-4 bg-[#eecfa1] hover:bg-[#dabb8c] text-[#3e2723] font-black text-xl rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <RefreshCcw className="w-6 h-6" />
-                  PLAY AGAIN
-                </button>
-             </div>
-           </div>
         )}
 
         <div className="relative z-10 flex flex-col items-center w-full">
