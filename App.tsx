@@ -250,7 +250,7 @@ const App: React.FC = () => {
       )}
 
       {/* Game Board (The Box) */}
-      <div className="relative w-full max-w-5xl bg-[#110505] rounded-3xl p-6 sm:p-12 shadow-[inset_0_0_80px_rgba(0,0,0,1)] border-8 border-[#2a1810]">
+      <div className="relative w-full max-w-5xl bg-[#110505] rounded-3xl p-2 sm:p-6 md:p-12 shadow-[inset_0_0_80px_rgba(0,0,0,1)] border-8 border-[#2a1810]">
         
         <div className="relative z-10 flex flex-col items-center w-full">
           {/* Back Row (Teal - Row 2) */}
@@ -259,12 +259,12 @@ const App: React.FC = () => {
           </div>
           
           {/* Middle Row (Blue - Row 1) - Overlaps Back Row */}
-          <div className="w-full z-10 relative -mt-20 lg:-mt-24 pointer-events-none">
+          <div className="w-full z-10 relative -mt-10 sm:-mt-16 lg:-mt-20 pointer-events-none">
              {renderRow(1)}
           </div>
           
           {/* Front Row (Purple - Row 0) - Overlaps Middle Row */}
-          <div className="w-full z-20 relative -mt-20 lg:-mt-24 pointer-events-none">
+          <div className="w-full z-20 relative -mt-10 sm:-mt-16 lg:-mt-20 pointer-events-none">
              {renderRow(0)}
           </div>
         </div>
