@@ -102,7 +102,6 @@ const App: React.FC = () => {
     setStatus('playing');
     setMessage('Rolling...');
     
-    // Animation delay
     setTimeout(() => {
       const d1 = rollDie();
       // If diceCount is 1, d2 is 0. 
@@ -110,9 +109,8 @@ const App: React.FC = () => {
       const newSum = d1 + d2;
       setDice({ values: [d1, d2], rolling: false });
       
-      // Check for loss condition immediately after roll
-      const availableTiles = tiles.filter(t => isTileAvailable(t, tiles));
-      if (!canMakeSum(newSum, availableTiles)) {
+      // Check for loss condition immediately after roll using updated logic
+      if (!canMakeSum(newSum, tiles)) {
         setStatus('lost');
       } else {
         setTurnPhase('select');
@@ -125,7 +123,21 @@ const App: React.FC = () => {
     if (status !== 'playing' || dice.rolling || turnPhase !== 'select') return;
 
     if (selectedTileIds.includes(clickedTile.id)) {
-      setSelectedTileIds((prev) => prev.filter((id) => id !== clickedTile.id));
+      // Deselecting: Remove this tile AND any dependent tiles behind it
+      setSelectedTileIds((prev) => {
+        // Find tiles that need to be removed:
+        // 1. The clicked tile
+        // 2. Any selected tile in the same column with a row index > clickedTile.row
+        const idsToRemove = [clickedTile.id];
+        const dependentTiles = tiles.filter(t => 
+           t.col === clickedTile.col && 
+           t.row > clickedTile.row && 
+           prev.includes(t.id)
+        );
+        dependentTiles.forEach(t => idsToRemove.push(t.id));
+
+        return prev.filter(id => !idsToRemove.includes(id));
+      });
     } else {
       // Allow selection
       setSelectedTileIds((prev) => [...prev, clickedTile.id]);
@@ -180,7 +192,7 @@ const App: React.FC = () => {
           <Tile
             key={tile.id}
             tile={tile}
-            available={isTileAvailable(tile, tiles) && status === 'playing' && turnPhase === 'select'}
+            available={isTileAvailable(tile, tiles, selectedTileIds) && status === 'playing' && turnPhase === 'select'}
             selected={selectedTileIds.includes(tile.id)}
             onClick={handleTileClick}
           />
@@ -223,7 +235,7 @@ const App: React.FC = () => {
               <li>Roll the dice to get a target sum.</li>
               <li>Select <strong>available</strong> tiles that add up to that sum.</li>
               <li>Row order: <span className="text-purple-400">Purple</span> (Front) &rarr; <span className="text-blue-400">Blue</span> (Middle) &rarr; <span className="text-teal-400">Teal</span> (Back).</li>
-              <li>You can only select a tile if the one directly in front of it is shut.</li>
+              <li>A tile is available if the one in front of it is <strong>shut</strong> or currently <strong>selected</strong>.</li>
               <li>Shut all tiles to win!</li>
               <li>If you reach the final row and all open tiles are 6 or less, you can choose to roll 1 die.</li>
             </ul>
