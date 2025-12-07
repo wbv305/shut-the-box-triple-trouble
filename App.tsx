@@ -30,6 +30,8 @@ const createInitialTiles = (): TileData[] => {
   return tiles;
 };
 
+const STATS_STORAGE_KEY = 'shut-the-box-triple-trouble-stats';
+
 const App: React.FC = () => {
   const [tiles, setTiles] = useState<TileData[]>(createInitialTiles());
   const [dice, setDice] = useState<DiceState>({ values: [1, 1], rolling: false });
@@ -45,15 +47,34 @@ const App: React.FC = () => {
   const [celebratedDoubleBox, setCelebratedDoubleBox] = useState(false);
   const [tempOverlay, setTempOverlay] = useState<{message: string, type: 'single' | 'double'} | null>(null);
 
-  // Stats State
-  const [stats, setStats] = useState<GameStats>({
-    gamesPlayed: 0,
-    lastScore: null,
-    totalScore: 0,
-    cleanSingleShuts: 0,
-    cleanDoubleShuts: 0,
-    wins: 0
+  // Stats State with LocalStorage persistence
+  const [stats, setStats] = useState<GameStats>(() => {
+    try {
+      const savedStats = localStorage.getItem(STATS_STORAGE_KEY);
+      if (savedStats) {
+        return JSON.parse(savedStats);
+      }
+    } catch (error) {
+      console.error("Failed to load stats from localStorage:", error);
+    }
+    return {
+      gamesPlayed: 0,
+      lastScore: null,
+      totalScore: 0,
+      cleanSingleShuts: 0,
+      cleanDoubleShuts: 0,
+      wins: 0
+    };
   });
+
+  // Save stats to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
+    } catch (error) {
+      console.error("Failed to save stats to localStorage:", error);
+    }
+  }, [stats]);
 
   // Computed Values
   const diceSum = dice.values[0] + dice.values[1];
