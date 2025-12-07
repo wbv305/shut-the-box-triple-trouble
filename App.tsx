@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Dice } from './components/Dice';
 import { Tile } from './components/Tile';
-import { TileData, GameStatus, DiceState } from './types';
-import { isTileAvailable, canMakeSum, rollDie } from './utils';
-import { Trophy, RefreshCcw, Info } from 'lucide-react';
+import { TileData, GameStatus, DiceState, GameStats } from './types';
+import { isTileAvailable, canMakeSum, rollDie, calculateScore } from './utils';
+import { Trophy, RefreshCcw, Info, BarChart2 } from 'lucide-react';
 
 // Setup initial board
 const createInitialTiles = (): TileData[] => {
@@ -39,6 +39,21 @@ const App: React.FC = () => {
   const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
   const [message, setMessage] = useState<string>('Roll the dice to start!');
   const [showInstructions, setShowInstructions] = useState<boolean>(false);
+  
+  // Celebration State
+  const [celebratedSingleBox, setCelebratedSingleBox] = useState(false);
+  const [celebratedDoubleBox, setCelebratedDoubleBox] = useState(false);
+  const [tempOverlay, setTempOverlay] = useState<{message: string, type: 'single' | 'double'} | null>(null);
+
+  // Stats State
+  const [stats, setStats] = useState<GameStats>({
+    gamesPlayed: 0,
+    lastScore: null,
+    totalScore: 0,
+    cleanSingleShuts: 0,
+    cleanDoubleShuts: 0,
+    wins: 0
+  });
 
   // Computed Values
   const diceSum = dice.values[0] + dice.values[1];
@@ -112,6 +127,14 @@ const App: React.FC = () => {
       // Check for loss condition immediately after roll using updated logic
       if (!canMakeSum(newSum, tiles)) {
         setStatus('lost');
+        // Update Stats for Loss
+        const finalScore = calculateScore(tiles);
+        setStats(prev => ({
+          ...prev,
+          gamesPlayed: prev.gamesPlayed + 1,
+          lastScore: finalScore,
+          totalScore: prev.totalScore + finalScore
+        }));
       } else {
         setTurnPhase('select');
         setMessage(`Select tiles that sum to ${newSum}`);
@@ -161,11 +184,72 @@ const App: React.FC = () => {
     setSelectedTileIds([]);
 
     // Check Win Condition
-    if (newTiles.every((t) => t.status === 'shut')) {
+    const isWin = newTiles.every((t) => t.status === 'shut');
+    if (isWin) {
       setStatus('won');
+      // Update Stats for Win
+      setStats(prev => ({
+        ...prev,
+        gamesPlayed: prev.gamesPlayed + 1,
+        wins: prev.wins + 1,
+        lastScore: 0,
+        // totalScore doesn't change on a win (score 0)
+      }));
     } else {
       setTurnPhase('roll');
       setMessage("Roll again!");
+    }
+
+    // --- Milestone Celebrations & Stats ---
+    const r0ShutCount = newTiles.filter(t => t.row === 0 && t.status === 'shut').length;
+    const r1ShutCount = newTiles.filter(t => t.row === 1 && t.status === 'shut').length;
+    const r2ShutCount = newTiles.filter(t => t.row === 2 && t.status === 'shut').length;
+
+    let newSingleShut = false;
+    let newDoubleShut = false;
+
+    // Single Box Celebration: Row 0 fully shut, Row 1 & 2 untouched
+    if (!celebratedSingleBox && r0ShutCount === 9 && r1ShutCount === 0 && r2ShutCount === 0) {
+      setCelebratedSingleBox(true);
+      newSingleShut = true;
+      setTempOverlay({ type: 'single', message: "You shut the single box! Keep going!" });
+      setTimeout(() => setTempOverlay(null), 4000);
+    }
+
+    // Double Box Celebration: Row 0 & 1 fully shut, Row 2 untouched
+    if (!celebratedDoubleBox && r0ShutCount === 9 && r1ShutCount === 9 && r2ShutCount === 0) {
+      setCelebratedDoubleBox(true);
+      newDoubleShut = true;
+      setTempOverlay({ type: 'double', message: "You shut the double box! Keep going!" });
+      
+      // Firework effect for Double Box
+      if (window.confetti) {
+        const count = 200;
+        const defaults = { origin: { y: 0.7 } };
+        const fire = (particleRatio: number, opts: any) => {
+          window.confetti({
+            ...defaults,
+            ...opts,
+            particleCount: Math.floor(count * particleRatio)
+          });
+        };
+        fire(0.25, { spread: 26, startVelocity: 55 });
+        fire(0.2, { spread: 60 });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+        fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+        fire(0.1, { spread: 120, startVelocity: 45 });
+      }
+
+      setTimeout(() => setTempOverlay(null), 4000);
+    }
+
+    // Update Clean Shut Stats immediately if triggered
+    if (newSingleShut || newDoubleShut) {
+      setStats(prev => ({
+        ...prev,
+        cleanSingleShuts: prev.cleanSingleShuts + (newSingleShut ? 1 : 0),
+        cleanDoubleShuts: prev.cleanDoubleShuts + (newDoubleShut ? 1 : 0)
+      }));
     }
   };
 
@@ -177,6 +261,9 @@ const App: React.FC = () => {
     setDiceCount(2);
     setSelectedTileIds([]);
     setMessage('Roll the dice to start!');
+    setCelebratedSingleBox(false);
+    setCelebratedDoubleBox(false);
+    setTempOverlay(null);
   };
 
   // Render helpers
@@ -238,6 +325,7 @@ const App: React.FC = () => {
               <li>A tile is available if the one in front of it is <strong>shut</strong> or currently <strong>selected</strong>.</li>
               <li>Shut all tiles to win!</li>
               <li>If you reach the final row and all open tiles are 6 or less, you can choose to roll 1 die.</li>
+              <li><strong>Scoring:</strong> Front row tiles = 3x face value. Middle = 2x. Back = 1x. Lower score is better!</li>
             </ul>
             <button
               onClick={() => setShowInstructions(false)}
@@ -252,6 +340,73 @@ const App: React.FC = () => {
       {/* Game Board (The Box) */}
       <div className="relative w-full max-w-5xl bg-[#110505] rounded-3xl p-2 sm:p-6 md:p-12 shadow-[inset_0_0_80px_rgba(0,0,0,1)] border-8 border-[#2a1810]">
         
+        {/* Celebration Overlay */}
+        {tempOverlay && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+             <div className="bg-black/60 backdrop-blur-sm p-8 rounded-2xl animate-in fade-in zoom-in duration-300">
+               <h2 className={`
+                 text-4xl sm:text-6xl font-black text-center leading-tight drop-shadow-2xl
+                 ${tempOverlay.type === 'single' 
+                    ? 'bg-gradient-to-r from-red-500 via-yellow-400 to-purple-500 bg-clip-text text-transparent animate-pulse' 
+                    : 'bg-gradient-to-br from-pink-500 via-green-400 to-blue-500 bg-clip-text text-transparent animate-bounce'
+                 }
+               `}>
+                 {tempOverlay.message}
+               </h2>
+             </div>
+          </div>
+        )}
+
+        {/* Game Over / Stats Summary Overlay */}
+        {(status === 'won' || status === 'lost') && (
+           <div className="absolute inset-0 z-40 flex items-center justify-center p-4">
+             <div className="bg-[#1a1a1a]/95 backdrop-blur-md border-2 border-[#eecfa1]/30 p-6 sm:p-8 rounded-2xl max-w-lg w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+                <div className="text-center mb-6">
+                  <h2 className={`text-4xl font-black mb-2 ${status === 'won' ? 'text-green-400' : 'text-red-400'}`}>
+                    {status === 'won' ? 'YOU WON!' : 'GAME OVER'}
+                  </h2>
+                  <div className="text-6xl font-mono font-bold text-[#eecfa1] my-4">
+                    {status === 'won' ? 0 : calculateScore(tiles)}
+                  </div>
+                  <p className="text-gray-400 uppercase tracking-widest text-sm">Final Score</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                   <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold">{stats.gamesPlayed}</div>
+                      <div className="text-xs text-gray-400 uppercase">Games</div>
+                   </div>
+                   <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-green-400">{stats.wins}</div>
+                      <div className="text-xs text-gray-400 uppercase">Wins</div>
+                   </div>
+                   <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-purple-400">{stats.cleanSingleShuts}</div>
+                      <div className="text-xs text-gray-400 uppercase">Single Shuts</div>
+                   </div>
+                   <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-pink-400">{stats.cleanDoubleShuts}</div>
+                      <div className="text-xs text-gray-400 uppercase">Double Shuts</div>
+                   </div>
+                   <div className="bg-white/5 p-3 rounded-lg text-center col-span-2">
+                      <div className="text-2xl font-bold text-blue-300">
+                        {stats.gamesPlayed > 0 ? Math.round(stats.totalScore / stats.gamesPlayed) : 0}
+                      </div>
+                      <div className="text-xs text-gray-400 uppercase">Average Score</div>
+                   </div>
+                </div>
+
+                <button
+                  onClick={handleReset}
+                  className="w-full py-4 bg-[#eecfa1] hover:bg-[#dabb8c] text-[#3e2723] font-black text-xl rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  <RefreshCcw className="w-6 h-6" />
+                  PLAY AGAIN
+                </button>
+             </div>
+           </div>
+        )}
+
         <div className="relative z-10 flex flex-col items-center w-full">
           {/* Back Row (Teal - Row 2) */}
           <div className="w-full z-0 relative">

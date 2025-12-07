@@ -21,7 +21,7 @@ export const isTileAvailable = (tile: TileData, allTiles: TileData[], selectedTi
 };
 
 /**
- * Checks if any valid combination of tiles sums up to the target.
+ * Checks if any valid combination of tiles sums to the target.
  * Supports the rule where multiple tiles in a column can be selected in a chain.
  */
 export const canMakeSum = (target: number, allTiles: TileData[]): boolean => {
@@ -67,3 +67,20 @@ export const canMakeSum = (target: number, allTiles: TileData[]): boolean => {
 };
 
 export const rollDie = () => Math.floor(Math.random() * 6) + 1;
+
+/**
+ * Calculates the score based on remaining open tiles.
+ * Row 0 (Front): Value * 3
+ * Row 1 (Mid): Value * 2
+ * Row 2 (Back): Value * 1
+ */
+export const calculateScore = (tiles: TileData[]): number => {
+  return tiles.reduce((acc, tile) => {
+    if (tile.status === 'shut') return acc;
+    // Row 0 is index 0, but in our logic/visuals row 0 is front. 
+    // Prompt: "remaining tile in the first row counts triple its value"
+    // Our tiles: row 0 = Front.
+    const multiplier = tile.row === 0 ? 3 : tile.row === 1 ? 2 : 1;
+    return acc + (tile.value * multiplier);
+  }, 0);
+};

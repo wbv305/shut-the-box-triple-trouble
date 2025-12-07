@@ -12,3 +12,12 @@ export interface DiceState {
   values: [number, number];
   rolling: boolean;
 }
+
+export interface GameStats {
+  gamesPlayed: number;
+  lastScore: number | null;
+  totalScore: number;
+  cleanSingleShuts: number;
+  cleanDoubleShuts: number;
+  wins: number;
+}
